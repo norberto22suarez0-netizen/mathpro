@@ -89,7 +89,7 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
 
 # API Key configurada por defecto
 api_key = st.sidebar.text_input(
-    "API Key de Groq", 
+    "Key", 
     type="password", 
     value="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"
 )
