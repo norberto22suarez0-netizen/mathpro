@@ -150,7 +150,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**App diseñada para jóvenes universitarios de la materia de Matemática I**")
 
 st.title("📐 MathPro - Calculadora Universitaria")
-st.markdown("### 1er Año Ingeniería de Sistemas - Con Asistente Avanzado")
+st.markdown("### 1er Año Ingeniería de Sistemas - Matematica I")
 
 tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluación", "📋 Fórmulas Útiles"])
 
