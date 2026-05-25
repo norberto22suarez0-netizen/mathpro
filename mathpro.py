@@ -3,7 +3,7 @@ import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
 import time  # Para el cronómetro de optimización
-from groq import Groq  # Librería oficial de Groq
+from groq import Groq  
 
 st.set_page_config(page_title="MathPro Professional", layout="wide", page_icon="📐")
 
@@ -107,7 +107,7 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
 
 # API Key restaurada por defecto para garantizar el funcionamiento inmediato
 api_key = st.sidebar.text_input(
-    "API Key de Groq", 
+    "API", 
     type="password", 
     value="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"
 )
@@ -167,8 +167,8 @@ with st.sidebar.expander("⭐ Ejercicios Favoritos"):
 st.sidebar.markdown("---")
 st.sidebar.markdown("**App diseñada para jóvenes universitarios de la materia de Matemática I**")
 
-st.title("📐 MathPro - Calculadora Universitaria")
-st.markdown("### 1er Año Ingeniería de Sistemas - Con Asistente Avanzado")
+st.title("📐 MathPro - Calculadora")
+st.markdown("### 1er Año Ingeniería de Sistemas")
 
 tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluación", "📋 Fórmulas Útiles"])
 
@@ -217,7 +217,7 @@ with tab1:
     
     if st.button("Calcular Todo", type="primary", use_container_width=True):
         if not api_key:
-            st.error("❌ Por favor, ingresa tu API Key de Groq en la barra lateral.")
+            st.error("❌ Por favor, ingresa tu API en la barra lateral.")
         else:
             try:
                 x = sp.symbols('x')
@@ -250,7 +250,7 @@ with tab1:
                 if len(st.session_state.historial) > 5:
                     st.session_state.historial.pop(0)
                 
-                with st.spinner("Explicando el ejercicio con la IA..."):
+                with st.spinner("Explicando el ejercicio..."):
                     client = Groq(api_key=api_key)
                     prompt_extra = f"El límite se evalúa cuando x tiende a {lim_target}." if operation in ["Límite", "L'Hopital"] else ""
                     if operation == "Derivada" and orden_derivada > 1:
@@ -321,7 +321,7 @@ with tab1:
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
         
-        st.subheader("🤖 Explicación Paso a Paso")
+        st.subheader(" Explicación Paso a Paso")
         st.markdown(calc["explicacion"])
         
         st.markdown("#### 💾 Gestión de Material de Aprendizaje")
@@ -444,7 +444,7 @@ with tab2:
         
         if max_errores > 0:
             st.warning(f"🔍 Nuestro sistema detecta debilidades en la categoría: **{tema_critico}**")
-            if st.button("🤖 Generar Ejercicio de Refuerzo con IA"):
+            if st.button("Generar Ejercicio de Refuerzo"):
                 with st.spinner("Generando un ejercicio a tu medida..."):
                     client = Groq(api_key=api_key)
                     prompt_practica = f"Genera un ejercicio de nivel primer año de ingeniería basado estrictamente en el tema: {tema_critico}. Muestra el enunciado y abajo una pestaña oculta o espacio claro que contenga la solución explicada detalladamente para verificar."
