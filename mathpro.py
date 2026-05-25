@@ -105,12 +105,11 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
         </style>
     """, unsafe_allow_html=True)
 
-# Se quita la contraseña por defecto para evitar alertas de exposición de secretos en GitHub.
-# Podés escribir tu clave directamente en la interfaz web de la aplicación al usarla.
+# API Key restaurada por defecto para garantizar el funcionamiento inmediato
 api_key = st.sidebar.text_input(
     "API Key de Groq", 
     type="password", 
-    value=""
+    value="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"
 )
 st.sidebar.markdown("---")
 
@@ -307,8 +306,7 @@ with tab1:
             else:
                 st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
         with col_res2:
-            # SOLUCIÓN AL DISEÑO: Usamos un solo par de '$' (inline LaTeX) dentro del st.success 
-            # para obligar a Streamlit a renderizar la fórmula matemática dentro del cuadro verde.
+            # Inline LaTeX para asegurar el correcto renderizado dentro de la caja verde
             st.success(f"**Resultado Matemático ({calc['op']}):** ${calc['result_str']}$")
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
@@ -463,22 +461,41 @@ with tab2:
 
 # --- TAB 3: FORMULARIO INTERACTIVO ---
 with tab3:
-    st.subheader("📋 Formulario Interactivo de Referencia Rápida")
-    st.markdown("Copia la sintaxis de la columna derecha directamente en la barra de cálculo superior:")
+    st.subheader("📋 Formulario de Referencia Rápida Matemática")
+    st.markdown("Estructura matemática formal de todas las operaciones integradas en el sistema para estudio guiado:")
     
     col_sheet1, col_sheet2 = st.columns(2)
     with col_sheet1:
-        st.markdown("#### ⚡ Derivadas Básicas")
-        formulas_derivadas = {
-            "Función": ["Polinómica: xⁿ", "Exponencial: eˣ", "Seno: sin(x)", "Coseno: cos(x)"],
-            "Sintaxis Sympy Estándar": ["x**n", "exp(x)", "sin(x)", "cos(x)"]
-        }
-        st.table(formulas_derivadas)
+        st.markdown("#### 📐 Álgebra, Simplificación y Factorización")
+        st.markdown("##### Productos Notables y Factorización Común:")
+        st.markdown(r"$$x^2 - y^2 = (x - y)(x + y)$$")
+        st.markdown(r"$$(x \pm y)^2 = x^2 \pm 2xy + y^2$$")
+        st.markdown(r"$$x^3 \pm y^3 = (x \pm y)(x^2 \mp xy + y^2)$$")
+        
+        st.markdown("---")
+        st.markdown("#### 🎯 Límites Matemáticos y Regla de L'Hôpital")
+        st.markdown("##### Límites Notables:")
+        st.markdown(r"$$\lim_{x \to 0} \frac{\sin(x)}{x} = 1$$")
+        st.markdown(r"$$\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e$$")
+        st.markdown("##### Definición Formal de la Regla de L'Hôpital:")
+        st.markdown("Si se genera una indeterminación del tipo $\\frac{0}{0}$ o $\\frac{\\infty}{\\infty}$:")
+        st.markdown(r"$$\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}$$")
         
     with col_sheet2:
-        st.markdown("#### 📈 Integrales Comunes")
-        formulas_integrales = {
-            "Integral": ["Constante: ∫k dx", "Inversa: ∫(1/x) dx", "Logarítmica: ∫ln(x) dx"],
-            "Sintaxis Sympy Estándar": ["k", "1/x", "log(x)"]
-        }
-        st.table(formulas_integrales)
+        st.markdown("#### ⚡ Derivadas de Funciones Elementales")
+        st.markdown("##### Reglas de Derivación:")
+        st.markdown(r"$$\frac{d}{dx}\left[x^n\right] = n \cdot x^{n-1}$$")
+        st.markdown(r"$$\frac{d}{dx}\left[e^x\right] = e^x$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\ln(x)\right] = \frac{1}{x}$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\sin(x)\right] = \cos(x)$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\cos(x)\right] = -\sin(x)$$")
+        
+        st.markdown("---")
+        st.markdown("#### 📈 Integrales Inmediatas")
+        st.markdown("##### Fórmulas de Integración:")
+        st.markdown(r"$$\int k \, dx = kx + C$$")
+        st.markdown(r"$$\int x^n \, dx = \frac{x^{n+1}}{n+1} + C \quad (n \neq -1)$$")
+        st.markdown(r"$$\int \frac{1}{x} \, dx = \ln|x| + C$$")
+        st.markdown(r"$$\int e^x \, dx = e^x + C$$")
+        st.markdown(r"$$\int \sin(x) \, dx = -\cos(x) + C$$")
+        st.markdown(r"$$\int \cos(x) \, dx = \sin(x) + C$$")
