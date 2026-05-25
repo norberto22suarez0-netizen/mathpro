@@ -258,34 +258,37 @@ with tab1:
                     if operation == "Integral" and tipo_integral == "Definida":
                         prompt_extra += f" Es una integral definida desde {lim_a} hasta {lim_b}."
 
-                    # Modificación del prompt para exigir la parte vertical matemática estricta al final de la explicación perfecta
-                    instruccion_formato = """
-                    REGLA OBLIGATORIA ADICIONAL: Al final absoluto de tu respuesta, debes agregar una sección titulada obligatoriamente como: '### 🔢 Procedimiento Directo (Vertical)'.
-                    En esa sección final NO uses palabras, ni texto explicativo, ni contexto introductorio. Escribe ÚNICAMENTE el desarrollo matemático, paso a paso, de forma estrictamente VERTICAL (línea por línea hacia abajo) usando expresiones matemáticas limpias en LaTeX ($$ o $), mostrando cómo se transforma la expresión original hasta llegar al resultado final.
+                    # Ajustes estrictos al prompt para que todo el texto use notación de pizarra en LaTeX
+                    instruccion_pizarra = """
+                    REGLAS DE FORMATO MATEMÁTICO DE PIZARRA (OBLIGATORIO):
+                    1. Está COMPLETAMENTE PROHIBIDO escribir matemática como en la computadora. No uses asteriscos (*), no uses dobles asteriscos (**), ni sombreros (^), ni nombres de texto plano como 'x^2' o 'lim (h->0)'.
+                    2. CUALQUIER término matemático, variable, función o ecuación que menciones en tu explicación DEBE estar envuelto en notación LaTeX ($ para texto fluido o $$ para líneas independientes).
+                    3. Ejemplo correcto de pizarra: 'Evaluamos el límite cuando $x \\to 0$ en la función $f(x) = x^2 + 3x$'. Ejemplo incorrecto: 'Evaluamos el limite cuando x->0 en la funcion x**2 + 3*x'.
+                    4. Al final absoluto de tu respuesta, mantén la sección titulada: '### 🔢 Procedimiento Directo (Vertical)'. En ella, pon el desarrollo paso a paso, línea por línea hacia abajo, usando bloques con $$ de LaTeX, sin una sola palabra de texto.
                     """
 
                     if operation == "L'Hopital":
                         prompt_profesor = f"""
-                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas en la pizarra de la universidad. 
                         Explica de forma didáctica, clara y ordenada cómo resolver el siguiente límite aplicando la Regla de L'Hôpital (derivando numerador y denominador de la fracción de manera independiente).
-                        Operación: L'Hôpital | Expresión: {expr} | {prompt_extra} | Resultado final: {result}
-                        {instruccion_formato}
+                        Operación: L'Hôpital | Expresión original: ${sp.latex(f)}$ | {prompt_extra} | Resultado final: ${sp.latex(result) if not isinstance(result, str) else result}$
+                        {instruccion_pizarra}
                         """
                     else:
                         prompt_profesor = f"""
-                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas en la pizarra de la universidad. 
                         Explica de forma didáctica, clara y ordenada cómo resolver el siguiente ejercicio.
-                        Operación: {operation} | Expresión: {expr} | {prompt_extra} | Resultado: {result}
-                        {instruccion_formato}
+                        Operación: {operation} | Expresión original: ${sp.latex(f)}$ | {prompt_extra} | Resultado: ${sp.latex(result) if not isinstance(result, str) else result}$
+                        {instruccion_pizarra}
                         """
                         
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
-                            {"role": "system", "content": "Eres un tutor universitario ordenado experto en LaTeX."},
+                            {"role": "system", "content": "Eres un catedrático universitario de matemática pura que escribe impecablemente en la pizarra usando LaTeX ($ o $$). No usas formatos de código de computadora para las fórmulas."},
                             {"role": "user", "content": prompt_profesor}
                         ],
-                        temperature=0.4
+                        temperature=0.3
                     )
                     texto_explicacion = response.choices[0].message.content
                 
@@ -368,7 +371,7 @@ with tab2:
         {"pregunta": "Resuelve la ecuación lineal: 3x + 8 = 23", "opciones": ["x = 3", "x = 5", "x = 15", "x = 7"], "correcta": "x = 5", "tema": "Álgebra/Ecuaciones"},
         {"pregunta": "Encuentra la derivada de: x³ + 4x² - 2x", "opciones": ["3x² + 8x", "x² + 8x - 2", "3x² + 8x - 2", "3x² + 4x - 2"], "correcta": "3x² + 8x - 2", "tema": "Derivadas"},
         {"pregunta": "Determina la integral indefinida de: 4x + 5", "opciones": ["2x² + 5x + C", "4x² + 5x + C", "2x² + C", "x² + 5x + C"], "correcta": "2x² + 5x + C", "tema": "Integrales"},
-        {"pregunta": "Factoriza la siguiente expression: x² - 5x + 6", "opciones": ["(x-1)(x-6)", "(x+2)(x+3)", "(x-2)(x-3)", "(x-5)(x+1)"], "correcta": "(x-2)(x-3)", "tema": "Factorización"},
+        {"pregunta": "Factoriza la siguiente expresión: x² - 5x + 6", "opciones": ["(x-1)(x-6)", "(x+2)(x+3)", "(x-2)(x-3)", "(x-5)(x+1)"], "correcta": "(x-2)(x-3)", "tema": "Factorización"},
         {"pregunta": "Simplifica desarrollando el producto: (x+2)(x-3)", "opciones": ["x² - x - 6", "x² + x - 6", "x² - 5x - 6", "x² - 6"], "correcta": "x² - x - 6", "tema": "Álgebra/Ecuaciones"}
     ]
     
