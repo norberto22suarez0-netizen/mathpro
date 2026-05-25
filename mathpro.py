@@ -178,7 +178,6 @@ with tab1:
     
     col1, col2 = st.columns([2, 2])
     with col1:
-        # Agregada la opción L'Hopital al menú de selección
         lista_ops = ["Simplificar", "Límite", "L'Hopital", "Derivada", "Integral", "Factorizar"]
         default_index = lista_ops.index(st.session_state.input_op) if st.session_state.input_op in lista_ops else 0
         operation = st.selectbox("Selecciona operación", lista_ops, index=default_index)
@@ -193,7 +192,6 @@ with tab1:
     lim_a, lim_b = "-1", "1"
     lim_target = "0"
 
-    # L'Hopital también requiere saber a qué valor tiende x
     if operation in ["Límite", "L'Hopital"]:
         st.markdown("##### 🎯 Configuración del Límite")
         col_lim1, _ = st.columns(2)
@@ -260,7 +258,6 @@ with tab1:
                     if operation == "Integral" and tipo_integral == "Definida":
                         prompt_extra += f" Es una integral definida desde {lim_a} hasta {lim_b}."
 
-                    # Ajuste del prompt para guiar al modelo en la regla de L'Hopital
                     if operation == "L'Hopital":
                         prompt_profesor = f"""
                         Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
@@ -284,6 +281,7 @@ with tab1:
                     )
                     texto_explicacion = response.choices[0].message.content
                 
+                # Guardamos siempre la versión en Latex para la interfaz gráfica
                 st.session_state.ultimo_calculo = {
                     "op": operation,
                     "ex": expr,
@@ -309,7 +307,9 @@ with tab1:
             else:
                 st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
         with col_res2:
-            st.success(f"**Resultado Matemático ({calc['op']}):**\n$ {calc['result_str']} $")
+            # FIX DE FORMATO: Forzar el renderizado matemático real usando st.markdown con $$ en lugar de st.success directo con texto crudo
+            st.success(f"**Resultado Matemático ({calc['op']}):**")
+            st.markdown(f"$${calc['result_str']}$$")
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
         
