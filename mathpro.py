@@ -105,11 +105,12 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
         </style>
     """, unsafe_allow_html=True)
 
-# API Key configurada por defecto
+# Se quita la contraseña por defecto para evitar alertas de exposición de secretos en GitHub.
+# Podés escribir tu clave directamente en la interfaz web de la aplicación al usarla.
 api_key = st.sidebar.text_input(
     "API Key de Groq", 
     type="password", 
-    value="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"
+    value=""
 )
 st.sidebar.markdown("---")
 
@@ -281,7 +282,6 @@ with tab1:
                     )
                     texto_explicacion = response.choices[0].message.content
                 
-                # Guardamos siempre la versión en Latex para la interfaz gráfica
                 st.session_state.ultimo_calculo = {
                     "op": operation,
                     "ex": expr,
@@ -307,9 +307,9 @@ with tab1:
             else:
                 st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
         with col_res2:
-            # FIX DE FORMATO: Forzar el renderizado matemático real usando st.markdown con $$ en lugar de st.success directo con texto crudo
-            st.success(f"**Resultado Matemático ({calc['op']}):**")
-            st.markdown(f"$${calc['result_str']}$$")
+            # SOLUCIÓN AL DISEÑO: Usamos un solo par de '$' (inline LaTeX) dentro del st.success 
+            # para obligar a Streamlit a renderizar la fórmula matemática dentro del cuadro verde.
+            st.success(f"**Resultado Matemático ({calc['op']}):** ${calc['result_str']}$")
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
         
