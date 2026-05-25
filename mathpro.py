@@ -63,7 +63,10 @@ if st.session_state.theme == "Hacker Mode 💻":
 elif st.session_state.theme == "Orgullo UNI 🔵":
     st.markdown("""
         <style>
+        /* Fondo de la aplicación */
         .stApp { background-color: #f8fafc; }
+        
+        /* Barra lateral (Sidebar) - Fondo azul con letras blancas */
         [data-testid="stSidebar"] { background-color: #003366 !important; }
         [data-testid="stSidebar"] h2, [data-testid="stSidebar"] label, [data-testid="stSidebar"] p { 
             color: #ffffff !important; 
@@ -73,23 +76,38 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
             background-color: #ffffff !important;
             color: #333333 !important;
         }
+        
+        /* CUERPO PRINCIPAL: Forzar letras oscuras para que se lean sobre el fondo blanco */
+        h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, span { 
+            color: #1e293b !important; 
+        }
+        
+        /* Títulos principales en el azul de la UNI */
         h1, h2, h3 { color: #003366 !important; }
+        
+        /* Asegurar que el texto dentro de los inputs y dropdowns principales sea oscuro */
+        div[data-baseweb="select"] > div, input {
+            color: #1e293b !important;
+            background-color: #ffffff !important;
+        }
+        
+        /* Estilo de los botones */
         .stButton>button { 
             background-color: #003366; 
-            color: white; 
+            color: white !important; 
             border: none;
             border-radius: 8px;
         }
         .stButton>button:hover { 
             background-color: #002244; 
-            color: #ffffff; 
+            color: #ffffff !important; 
         }
         </style>
     """, unsafe_allow_html=True)
 
 # API Key configurada por defecto
 api_key = st.sidebar.text_input(
-    "Key", 
+    "API Key de Groq", 
     type="password", 
     value="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"
 )
@@ -150,7 +168,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("**App diseñada para jóvenes universitarios de la materia de Matemática I**")
 
 st.title("📐 MathPro - Calculadora Universitaria")
-st.markdown("### 1er Año Ingeniería de Sistemas - Matematica I")
+st.markdown("### 1er Año Ingeniería de Sistemas - Con Asistente Avanzado")
 
 tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluación", "📋 Fórmulas Útiles"])
 
@@ -158,6 +176,56 @@ tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluaci�
 with tab1:
     st.subheader("Calculadora Avanzada con Procedimientos")
     
+    # --- MÓDULO DE VISIÓN (PROCESAMIENTO POR FOTO) ---
+    with st.expander("📸 Cargar Ejercicio por Foto / Captura (Módulo Vision AI REAL)"):
+        st.write("Sube una imagen nítida del ejercicio matemático:")
+        uploaded_image = st.file_uploader("Elige una imagen...", type=["png", "jpg", "jpeg"])
+        
+        if uploaded_image is not None:
+            st.image(uploaded_image, caption="Imagen cargada", use_container_width=True)
+            
+            if st.button("Procesar Imagen con IA"):
+                if not api_key:
+                    st.error("❌ Por favor, ingresa tu API Key de Groq en la barra lateral.")
+                else:
+                    import base64
+                    try:
+                        bytes_data = uploaded_image.getvalue()
+                        base64_image = base64.b64encode(bytes_data).decode('utf-8')
+                        
+                        with st.spinner("La IA está leyendo tu imagen..."):
+                            client = Groq(api_key=api_key)
+                            # Modelo actualizado a producción para evitar Decommissioned / 404
+                            response = client.chat.completions.create(
+                                model="llama-3.2-11b-vision-instruct",
+                                messages=[
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {"type": "text", "text": "Analiza la imagen y extrae ÚNICAMENTE la expresión matemática o ecuación que veas. Devuélvela formateada para Python/Sympy (por ejemplo, usa * para multiplicar y ** para potencias). No agregues saludos ni explicaciones, solo la expresión."},
+                                            {
+                                                "type": "image_url",
+                                                "image_url": {
+                                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                temperature=0.0
+                            )
+                            
+                            resultado_ia = response.choices[0].message.content.strip()
+                            st.session_state.input_expr = resultado_ia
+                            st.success(f"🤖 IA detectó la expresión: `{resultado_ia}`")
+                            st.toast("¡Expresión cargada en la barra de cálculo!", icon="✅")
+                            st.rerun()
+                            
+                    except Exception as e:
+                        st.error(f"Error al conectar con el módulo de visión: {str(e)}")
+                        st.warning("⚠️ El servidor de visión de Groq se encuentra saturado o el modelo cambió de ID.")
+                        st.info("💡 Tip: Podés escribir la ecuación directamente en el cuadro de texto de abajo mientras se restablece el nodo visual.")
+
     col1, col2 = st.columns([2, 2])
     with col1:
         lista_ops = ["Simplificar", "Límite", "Derivada", "Integral", "Resolver Ecuación", "Factorizar", "Expandir"]
