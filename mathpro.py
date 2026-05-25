@@ -1,4 +1,77 @@
 import streamlit as st
+st.bar_chart(st.session_state.errores_quiz)
+        
+tema_critico = max(st.session_state.errores_quiz, key=st.session_state.errores_quiz.get)
+max_errores = st.session_state.errores_quiz[tema_critico]
+        
+if max_errores > 0:
+st.warning(f"🔍 Nuestro sistema detecta debilidades en la categoría: **{tema_critico}**")
+if st.button("🤖 Generar Ejercicio de Refuerzo con IA"):
+with st.spinner("Generando un ejercicio a tu medida..."):
+client = Groq(api_key=api_key)
+prompt_practica = f"Genera un ejercicio de nivel primer año de ingeniería basado estrictamente en el tema: {tema_critico}. Muestra el enunciado y abajo una pestaña oculta o espacio claro que contenga la solución explicada detalladamente para verificar."
+response = client.chat.completions.create(
+model="llama-3.1-8b-instant",
+messages=[
+{"role": "system", "content": "Eres un tutor de Inteligencia Artificial que ayuda a estudiantes a reforzar sus puntos bajos en matemática."},
+{"role": "user", "content": prompt_practica}
+],
+temperature=0.7
+)
+st.info(response.choices[0].message.content)
+else:
+st.success("😎 ¡Excelente balance! No tienes un tema crítico predominante en este intento.")
+
+if st.button("Reiniciar Cuestionario Completo"):
+st.session_state.q = 0
+st.session_state.score = 0
+st.session_state.lives = 3
+st.session_state.respondido = False
+st.session_state.errores_quiz = {"Álgebra/Ecuaciones": 0, "Derivadas": 0, "Integrales": 0, "Factorización": 0}
+st.session_state.start_time = time.time()
+st.rerun()
+
+# --- TAB 3: FORMULARIO INTERACTIVO ---
+with tab3:
+st.subheader("📋 Formulario de Referencia Rápida Matemática")
+st.markdown("Estructura matemática formal de todas las operaciones integradas en el sistema para estudio guiado:")
+    
+col_sheet1, col_sheet2 = st.columns(2)
+with col_sheet1:
+st.markdown("#### 📐 Álgebra, Simplificación y Factorización")
+st.markdown("##### Productos Notables y Factorización Común:")
+st.markdown(r"$$x^2 - y^2 = (x - y)(x + y)$$")
+st.markdown(r"$$(x \pm y)^2 = x^2 \pm 2xy + y^2$$")
+st.markdown(r"$$x^3 \pm y^3 = (x \pm y)(x^2 \mp xy + y^2)$$")
+        
+st.markdown("---")
+st.markdown("#### 🎯 Límites Matemáticos y Regla de L'Hôpital")
+st.markdown("##### Límites Notables:")
+st.markdown(r"$$\lim_{x \to 0} \frac{\sin(x)}{x} = 1$$")
+st.markdown(r"$$\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e$$")
+st.markdown("##### Definición Formal de la Regla de L'Hôpital:")
+st.markdown("Si se genera una indeterminación del tipo $\\frac{0}{0}$ o $\\frac{\\infty}{\\infty}$:")
+st.markdown(r"$$\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}$$")
+        
+with col_sheet2:
+st.markdown("#### ⚡ Derivadas de Funciones Elementales")
+st.markdown("##### Reglas de Derivación:")
+st.markdown(r"$$\frac{d}{dx}\left[x^n\right] = n \cdot x^{n-1}$$")
+st.markdown(r"$$\frac{d}{dx}\left[e^x\right] = e^x$$")
+st.markdown(r"$$\frac{d}{dx}\left[\ln(x)\right] = \frac{1}{x}$$")
+st.markdown(r"$$\frac{d}{dx}\left[\sin(x)\right] = \cos(x)$$")
+st.markdown(r"$$\frac{d}{dx}\left[\cos(x)\right] = -\sin(x)$$")
+        
+st.markdown("---")
+st.markdown("#### 📈 Integrales Inmediatas")
+st.markdown("##### Fórmulas de Integración:")
+st.markdown(r"$$\int k \, dx = kx + C$$")
+st.markdown(r"$$\int x^n \, dx = \frac{x^{n+1}}{n+1} + C \quad (n \neq -1)$$")
+st.markdown(r"$$\int \frac{1}{x} \, dx = \ln|x| + C$$")
+st.markdown(r"$$\int e^x \, dx = e^x + C$$")
+st.markdown(r"$$\int \sin(x) \, dx = -\cos(x) + C$$")
+st.markdown(r"$$\int \cos(x) \, dx = \sin(x) + C$$")
+import streamlit as st
 import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
@@ -107,7 +180,7 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
 
 # API Key restaurada por defecto para garantizar el funcionamiento inmediato
 api_key = st.sidebar.text_input(
-    "API Key de Groq", 
+    "API", 
     type="password", 
     value="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"
 )
@@ -167,8 +240,8 @@ with st.sidebar.expander("⭐ Ejercicios Favoritos"):
 st.sidebar.markdown("---")
 st.sidebar.markdown("**App diseñada para jóvenes universitarios de la materia de Matemática I**")
 
-st.title("📐 MathPro - Calculadora Universitaria")
-st.markdown("### 1er Año Ingeniería de Sistemas - Con Asistente Avanzado")
+st.title("📐 MathPro - Calculadora")
+st.markdown("### 1er Año Ingeniería de Sistemas")
 
 tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluación", "📋 Fórmulas Útiles"])
 
@@ -217,7 +290,7 @@ with tab1:
     
     if st.button("Calcular Todo", type="primary", use_container_width=True):
         if not api_key:
-            st.error("❌ Por favor, ingresa tu API Key de Groq en la barra lateral.")
+            st.error("❌ Por favor, ingresa tu API en la barra lateral.")
         else:
             try:
                 x = sp.symbols('x')
@@ -250,7 +323,7 @@ with tab1:
                 if len(st.session_state.historial) > 5:
                     st.session_state.historial.pop(0)
                 
-                with st.spinner("Explicando el ejercicio con la IA..."):
+                with st.spinner("Explicando el ejercicio..."):
                     client = Groq(api_key=api_key)
                     prompt_extra = f"El límite se evalúa cuando x tiende a {lim_target}." if operation in ["Límite", "L'Hopital"] else ""
                     if operation == "Derivada" and orden_derivada > 1:
@@ -321,7 +394,7 @@ with tab1:
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
         
-        st.subheader("🤖 Explicación Paso a Paso")
+        st.subheader(" Explicación Paso a Paso")
         st.markdown(calc["explicacion"])
         
         st.markdown("#### 💾 Gestión de Material de Aprendizaje")
@@ -444,7 +517,7 @@ with tab2:
         
         if max_errores > 0:
             st.warning(f"🔍 Nuestro sistema detecta debilidades en la categoría: **{tema_critico}**")
-            if st.button("🤖 Generar Ejercicio de Refuerzo con IA"):
+            if st.button("Generar Ejercicio de Refuerzo"):
                 with st.spinner("Generando un ejercicio a tu medida..."):
                     client = Groq(api_key=api_key)
                     prompt_practica = f"Genera un ejercicio de nivel primer año de ingeniería basado estrictamente en el tema: {tema_critico}. Muestra el enunciado y abajo una pestaña oculta o espacio claro que contenga la solución explicada detalladamente para verificar."
