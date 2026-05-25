@@ -176,59 +176,10 @@ tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluaci�
 with tab1:
     st.subheader("Calculadora Avanzada con Procedimientos")
     
-    # --- MÓDULO DE VISIÓN (PROCESAMIENTO POR FOTO) ---
-    with st.expander("📸 Cargar Ejercicio por Foto / Captura (Módulo Vision AI REAL)"):
-        st.write("Sube una imagen nítida del ejercicio matemático:")
-        uploaded_image = st.file_uploader("Elige una imagen...", type=["png", "jpg", "jpeg"])
-        
-        if uploaded_image is not None:
-            st.image(uploaded_image, caption="Imagen cargada", use_container_width=True)
-            
-            if st.button("Procesar Imagen con IA"):
-                if not api_key:
-                    st.error("❌ Por favor, ingresa tu API Key de Groq en la barra lateral.")
-                else:
-                    import base64
-                    try:
-                        bytes_data = uploaded_image.getvalue()
-                        base64_image = base64.b64encode(bytes_data).decode('utf-8')
-                        
-                        with st.spinner("La IA está leyendo tu imagen..."):
-                            client = Groq(api_key=api_key)
-                            # Modelo actualizado a producción para evitar Decommissioned / 404
-                            response = client.chat.completions.create(
-                                model="llama-3.2-11b-vision-instruct",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": [
-                                            {"type": "text", "text": "Analiza la imagen y extrae ÚNICAMENTE la expresión matemática o ecuación que veas. Devuélvela formateada para Python/Sympy (por ejemplo, usa * para multiplicar y ** para potencias). No agregues saludos ni explicaciones, solo la expresión."},
-                                            {
-                                                "type": "image_url",
-                                                "image_url": {
-                                                    "url": f"data:image/jpeg;base64,{base64_image}"
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ],
-                                temperature=0.0
-                            )
-                            
-                            resultado_ia = response.choices[0].message.content.strip()
-                            st.session_state.input_expr = resultado_ia
-                            st.success(f"🤖 IA detectó la expresión: `{resultado_ia}`")
-                            st.toast("¡Expresión cargada en la barra de cálculo!", icon="✅")
-                            st.rerun()
-                            
-                    except Exception as e:
-                        st.error(f"Error al conectar con el módulo de visión: {str(e)}")
-                        st.warning("⚠️ El servidor de visión de Groq se encuentra saturado o el modelo cambió de ID.")
-                        st.info("💡 Tip: Podés escribir la ecuación directamente en el cuadro de texto de abajo mientras se restablece el nodo visual.")
-
     col1, col2 = st.columns([2, 2])
     with col1:
-        lista_ops = ["Simplificar", "Límite", "Derivada", "Integral", "Resolver Ecuación", "Factorizar", "Expandir"]
+        # Agregada la opción L'Hopital al menú de selección
+        lista_ops = ["Simplificar", "Límite", "L'Hopital", "Derivada", "Integral", "Factorizar"]
         default_index = lista_ops.index(st.session_state.input_op) if st.session_state.input_op in lista_ops else 0
         operation = st.selectbox("Selecciona operación", lista_ops, index=default_index)
     with col2:
@@ -242,7 +193,8 @@ with tab1:
     lim_a, lim_b = "-1", "1"
     lim_target = "0"
 
-    if operation == "Límite":
+    # L'Hopital también requiere saber a qué valor tiende x
+    if operation in ["Límite", "L'Hopital"]:
         st.markdown("##### 🎯 Configuración del Límite")
         col_lim1, _ = st.columns(2)
         with col_lim1:
@@ -284,11 +236,7 @@ with tab1:
                             result = f"{result} + C"
                 elif operation == "Factorizar":
                     result = sp.factor(f)
-                elif operation == "Expandir":
-                    result = sp.expand(f)
-                elif operation == "Resolver Ecuación":
-                    result = sp.solve(f, x)
-                elif operation == "Límite":
+                elif operation in ["Límite", "L'Hopital"]:
                     target_sym = sp.sympify(lim_target)
                     result = sp.limit(f, x, target_sym)
                 else:
@@ -306,17 +254,26 @@ with tab1:
                 
                 with st.spinner("Explicando el ejercicio con la IA..."):
                     client = Groq(api_key=api_key)
-                    prompt_extra = f"El límite se evalúa cuando x tiende a {lim_target}." if operation == "Límite" else ""
+                    prompt_extra = f"El límite se evalúa cuando x tiende a {lim_target}." if operation in ["Límite", "L'Hopital"] else ""
                     if operation == "Derivada" and orden_derivada > 1:
                         prompt_extra += f" Se solicita calcular la derivada de orden {orden_derivada}."
                     if operation == "Integral" and tipo_integral == "Definida":
                         prompt_extra += f" Es una integral definida desde {lim_a} hasta {lim_b}."
 
-                    prompt_profesor = f"""
-                    Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
-                    Explica de forma didáctica, clara y estrictamente VERTICAL cómo resolver el siguiente ejercicio.
-                    Operación: {operation} | Expresión: {expr} | {prompt_extra} | Resultado: {result}
-                    """
+                    # Ajuste del prompt para guiar al modelo en la regla de L'Hopital
+                    if operation == "L'Hopital":
+                        prompt_profesor = f"""
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
+                        Explica de forma didáctica, clara y estrictamente VERTICAL cómo resolver el siguiente límite aplicando la Regla de L'Hôpital (derivando numerador y denominador de la fracción de manera independiente).
+                        Operación: L'Hôpital | Expresión: {expr} | {prompt_extra} | Resultado final: {result}
+                        """
+                    else:
+                        prompt_profesor = f"""
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
+                        Explica de forma didáctica, clara y estrictamente VERTICAL cómo resolver el siguiente ejercicio.
+                        Operación: {operation} | Expresión: {expr} | {prompt_extra} | Resultado: {result}
+                        """
+                        
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
@@ -347,7 +304,7 @@ with tab1:
         st.markdown("---")
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
-            if calc["op"] == "Límite":
+            if calc["op"] in ["Límite", "L'Hopital"]:
                 st.info(f"**Expresión Original:**\n$\\lim_{{x \\to {calc['lim_target']}}} ({calc['expr_latex']})$")
             else:
                 st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
