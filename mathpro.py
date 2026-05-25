@@ -258,26 +258,34 @@ with tab1:
                     if operation == "Integral" and tipo_integral == "Definida":
                         prompt_extra += f" Es una integral definida desde {lim_a} hasta {lim_b}."
 
+                    # Modificación del prompt para exigir la parte vertical matemática estricta al final de la explicación perfecta
+                    instruccion_formato = """
+                    REGLA OBLIGATORIA ADICIONAL: Al final absoluto de tu respuesta, debes agregar una sección titulada obligatoriamente como: '### 🔢 Procedimiento Directo (Vertical)'.
+                    En esa sección final NO uses palabras, ni texto explicativo, ni contexto introductorio. Escribe ÚNICAMENTE el desarrollo matemático, paso a paso, de forma estrictamente VERTICAL (línea por línea hacia abajo) usando expresiones matemáticas limpias en LaTeX ($$ o $), mostrando cómo se transforma la expresión original hasta llegar al resultado final.
+                    """
+
                     if operation == "L'Hopital":
                         prompt_profesor = f"""
                         Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
-                        Explica de forma didáctica, clara y estrictamente VERTICAL cómo resolver el siguiente límite aplicando la Regla de L'Hôpital (derivando numerador y denominador de la fracción de manera independiente).
+                        Explica de forma didáctica, clara y ordenada cómo resolver el siguiente límite aplicando la Regla de L'Hôpital (derivando numerador y denominador de la fracción de manera independiente).
                         Operación: L'Hôpital | Expresión: {expr} | {prompt_extra} | Resultado final: {result}
+                        {instruccion_formato}
                         """
                     else:
                         prompt_profesor = f"""
                         Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas. 
-                        Explica de forma didáctica, clara y estrictamente VERTICAL cómo resolver el siguiente ejercicio.
+                        Explica de forma didáctica, clara y ordenada cómo resolver el siguiente ejercicio.
                         Operación: {operation} | Expresión: {expr} | {prompt_extra} | Resultado: {result}
+                        {instruccion_formato}
                         """
                         
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
-                            {"role": "system", "content": "Eres un tutor universitario ordenado."},
+                            {"role": "system", "content": "Eres un tutor universitario ordenado experto en LaTeX."},
                             {"role": "user", "content": prompt_profesor}
                         ],
-                        temperature=0.5
+                        temperature=0.4
                     )
                     texto_explicacion = response.choices[0].message.content
                 
@@ -306,7 +314,6 @@ with tab1:
             else:
                 st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
         with col_res2:
-            # Inline LaTeX para asegurar el correcto renderizado dentro de la caja verde
             st.success(f"**Resultado Matemático ({calc['op']}):** ${calc['result_str']}$")
         with col_res3:
             st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
@@ -361,7 +368,7 @@ with tab2:
         {"pregunta": "Resuelve la ecuación lineal: 3x + 8 = 23", "opciones": ["x = 3", "x = 5", "x = 15", "x = 7"], "correcta": "x = 5", "tema": "Álgebra/Ecuaciones"},
         {"pregunta": "Encuentra la derivada de: x³ + 4x² - 2x", "opciones": ["3x² + 8x", "x² + 8x - 2", "3x² + 8x - 2", "3x² + 4x - 2"], "correcta": "3x² + 8x - 2", "tema": "Derivadas"},
         {"pregunta": "Determina la integral indefinida de: 4x + 5", "opciones": ["2x² + 5x + C", "4x² + 5x + C", "2x² + C", "x² + 5x + C"], "correcta": "2x² + 5x + C", "tema": "Integrales"},
-        {"pregunta": "Factoriza la siguiente expresión: x² - 5x + 6", "opciones": ["(x-1)(x-6)", "(x+2)(x+3)", "(x-2)(x-3)", "(x-5)(x+1)"], "correcta": "(x-2)(x-3)", "tema": "Factorización"},
+        {"pregunta": "Factoriza la siguiente expression: x² - 5x + 6", "opciones": ["(x-1)(x-6)", "(x+2)(x+3)", "(x-2)(x-3)", "(x-5)(x+1)"], "correcta": "(x-2)(x-3)", "tema": "Factorización"},
         {"pregunta": "Simplifica desarrollando el producto: (x+2)(x-3)", "opciones": ["x² - x - 6", "x² + x - 6", "x² - 5x - 6", "x² - 6"], "correcta": "x² - x - 6", "tema": "Álgebra/Ecuaciones"}
     ]
     
