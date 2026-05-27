@@ -6,11 +6,10 @@ import time  # Para el cronómetro de optimización
 from groq import Groq  
 from PIL import Image
 
-# NOTA: Para que el OCR funcione, necesitas instalar: pip install pytesseract easyocr
-# Usaremos una lógica de simulación de OCR nativa o puedes implementar 'easyocr' fácilmente.
+# Intentar cargar EasyOCR para el escáner de la cámara
 try:
     import easyocr
-    reader = easyocr.Reader(['en']) # Inicializa el lector OCR
+    reader = easyocr.Reader(['en']) # Inicializa el lector OCR en inglés/matemáticas
 except ImportError:
     reader = None
 
@@ -33,7 +32,7 @@ st.session_state.theme = st.sidebar.selectbox(
 st.sidebar.markdown("### 📈 Control de Gráfica")
 rango_x = st.sidebar.slider("Rango de visualización (Eje X)", 1, 50, 10, help="Define los límites -N a N para la gráfica")
 
-# --- NUEVA FUNCIÓN: ACTIVAR MÓDULO DE CÁMARA ---
+# --- NUEVA FUNCIÓN: MÓDULO DE CÁMARA EN SIDEBAR ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📷 Escáner de Ejercicios")
 activar_camara = st.sidebar.checkbox("Activar Cámara / OCR", value=False, help="Permite tomar una foto a un ejercicio escrito")
@@ -99,7 +98,7 @@ elif st.session_state.theme == "Orgullo UNI 🔵":
         /* Títulos principales en el azul de la UNI */
         h1, h2, h3 { color: #003366 !important; }
         
-        /* Asegurar que el texto dentro de los inputs sea oscuro */
+        /* Asegurar que el texto dentro de los inputs y dropdowns sea oscuro */
         div[data-baseweb="select"] > div, input {
             color: #1e293b !important;
             background-color: #ffffff !important;
@@ -127,7 +126,7 @@ api_key = st.sidebar.text_input(
 )
 st.sidebar.markdown("---")
 
-# --- INICIALIZACIÓN DE VARIABLES DE ESTADO ---
+# --- INICIALIZACIÓN DE VARIABLES DE ESTADO (SESSION STATE) ---
 if 'historial' not in st.session_state:
     st.session_state.historial = []
 if 'errores_quiz' not in st.session_state:
@@ -143,18 +142,21 @@ if 'input_op' not in st.session_state:
 if 'ultimo_calculo' not in st.session_state:
     st.session_state.ultimo_calculo = None
 
-# --- SIDEBAR: HISTORIAL Y FAVORITOS ---
+# --- SIDEBAR: HISTORIAL ---
 with st.sidebar.expander("📚 Historial de Consultas"):
     if st.session_state.historial:
         for i, h in enumerate(reversed(st.session_state.historial)):
             st.write(f"**{i+1}.** {h['op']}: `{h['ex']}`")
+        
         st.markdown("---")
         if st.button("🗑️ Borrar Historial", use_container_width=True):
             st.session_state.historial = []
+            st.toast("Historial de consultas eliminado.", icon="🗑️")
             st.rerun()
     else:
         st.write("Aún no has realizado cálculos.")
 
+# --- SIDEBAR: FAVORITOS ---
 with st.sidebar.expander("⭐ Ejercicios Favoritos"):
     if st.session_state.favoritos:
         for idx, fav in enumerate(st.session_state.favoritos):
@@ -166,9 +168,11 @@ with st.sidebar.expander("⭐ Ejercicios Favoritos"):
                     st.session_state.input_expr = fav['ex']
                     st.session_state.input_op = fav['op']
                     st.rerun()
+        
         st.markdown("---")
         if st.button("🗑️ Vaciar Favoritos", use_container_width=True):
             st.session_state.favoritos = []
+            st.toast("Lista de favoritos eliminada con éxito.", icon="⭐")
             st.rerun()
     else:
         st.write("No tienes elementos guardados.")
@@ -187,35 +191,31 @@ with tab1:
     
     # LÓGICA DE PROCESAMIENTO DE CÁMARA (OCR)
     if activar_camara:
-        st.info("📸 Captura un ejercicio claro escrito en papel o pizarra.")
+        st.info("📸 Captura un ejercicio claro escrito en papel o pantalla.")
         foto_archivo = st.camera_input("Toma la foto aquí")
         
         if foto_archivo is not None:
             with st.spinner("Analizando trazos de la imagen..."):
                 try:
                     imagen_pil = Image.open(foto_archivo)
-                    # Convertir a arreglo numpy para EasyOCR
                     img_np = np.array(imagen_pil)
                     
                     if reader is not None:
                         resultado_ocr = reader.readtext(img_np, detail=0)
                         if resultado_ocr:
-                            # Unir los fragmentos detectados y limpiar espacios comunes
                             texto_detectado = "".join(resultado_ocr).replace(" ", "").lower()
-                            # Reemplazos básicos para ajustar a sintaxis Python
                             texto_detectado = texto_detectado.replace("^", "**")
                             st.session_state.input_expr = texto_detectado
                             st.success(f"✨ Texto detectado con éxito: `{texto_detectado}`")
                         else:
-                            st.warning("⚠️ No se pudo extraer texto claro. Intenta con mejor iluminación.")
+                            st.warning("⚠️ No se pudo extraer texto claro. Intenta de nuevo con más luz.")
                     else:
-                        # Modo simulación por si no tienes instalado EasyOCR en local todavía
-                        st.warning("Librería de visión EasyOCR no detectada en el entorno. Cargando demo analítico...")
+                        st.warning("Librería de visión EasyOCR no detectada. Cargando demo analítico...")
                         st.session_state.input_expr = "x**2 / (x - 1)"
                         
                 except Exception as e:
                     st.error(f"Error en el escaneo: {str(e)}")
-
+    
     col1, col2 = st.columns([2, 2])
     with col1:
         lista_ops = ["Simplificar", "Límite", "L'Hopital", "Derivada", "Integral", "Factorizar"]
@@ -227,7 +227,6 @@ with tab1:
     st.session_state.input_expr = expr
     st.session_state.input_op = operation
 
-    # [El resto de la lógica de tu Tab 1, Tab 2 y Tab 3 se mantiene exactamente igual]
     orden_derivada = 1
     tipo_integral = "Indefinida"
     lim_a, lim_b = "-1", "1"
@@ -236,17 +235,20 @@ with tab1:
     if operation in ["Límite", "L'Hopital"]:
         st.markdown("##### 🎯 Configuración del Límite")
         col_lim1, _ = st.columns(2)
-        with col_lim1: lim_target = st.text_input("¿A qué valor tiende x?", "0")
+        with col_lim1:
+            lim_target = st.text_input("¿A qué valor tiende x? (Usa un número o 'oo' para infinito):", "0")
             
     elif operation == "Derivada":
         st.markdown("##### ⚡ Configuración de la Derivada")
         col_der1, _ = st.columns(2)
-        with col_der1: orden_derivada = st.selectbox("Orden de la derivada:", [1, 2, 3], format_func=lambda x: f"{x}ª Derivada")
+        with col_der1:
+            orden_derivada = st.selectbox("Orden de la derivada:", [1, 2, 3], format_func=lambda x: f"{x}ª Derivada")
 
     elif operation == "Integral":
         st.markdown("##### 📐 Configuración de la Integral")
         col_int1, col_int2 = st.columns(2)
-        with col_int1: tipo_integral = st.radio("Tipo de integral:", ["Indefinida", "Definida"], horizontal=True)
+        with col_int1:
+            tipo_integral = st.radio("Tipo de integral:", ["Indefinida", "Definida"], horizontal=True)
         with col_int2:
             if tipo_integral == "Definida":
                 col_ab1, col_ab2 = st.columns(2)
@@ -261,75 +263,288 @@ with tab1:
                 x = sp.symbols('x')
                 f = sp.sympify(expr)
                 
-                if operation == "Derivada": result = sp.diff(f, x, orden_derivada)
+                if operation == "Derivada":
+                    result = sp.diff(f, x, orden_derivada)
                 elif operation == "Integral":
-                    if tipo_integral == "Definida": result = sp.integrate(f, (x, sp.sympify(lim_a), sp.sympify(lim_b)))
+                    if tipo_integral == "Definida":
+                        result = sp.integrate(f, (x, sp.sympify(lim_a), sp.sympify(lim_b)))
                     else:
                         result = sp.integrate(f, x)
-                        if result != sp.Integral(f, x): result = f"{result} + C"
-                elif operation == "Factorizar": result = sp.factor(f)
-                elif operation in ["Límite", "L'Hopital"]: result = sp.limit(f, x, sp.sympify(lim_target))
-                else: result = sp.simplify(f)
+                        if result != sp.Integral(f, x):
+                            result = f"{result} + C"
+                elif operation == "Factorizar":
+                    result = sp.factor(f)
+                elif operation in ["Límite", "L'Hopital"]:
+                    target_sym = sp.sympify(lim_target)
+                    result = sp.limit(f, x, target_sym)
+                else:
+                    result = sp.simplify(f)
                 
-                try: corte_y = f.subs(x, 0); corte_y_str = str(corte_y)
-                except Exception: corte_y_str = "No definido"
+                try:
+                    corte_y = f.subs(x, 0)
+                    corte_y_str = str(corte_y)
+                except Exception:
+                    corte_y_str = "No definido"
 
                 st.session_state.historial.append({"op": operation, "ex": expr})
-                if len(st.session_state.historial) > 5: st.session_state.historial.pop(0)
+                if len(st.session_state.historial) > 5:
+                    st.session_state.historial.pop(0)
                 
                 with st.spinner("Explicando el ejercicio..."):
                     client = Groq(api_key=api_key)
                     prompt_extra = f"El límite se evalúa cuando x tiende a {lim_target}." if operation in ["Límite", "L'Hopital"] else ""
+                    if operation == "Derivada" and orden_derivada > 1:
+                        prompt_extra += f" Se solicita calcular la derivada de orden {orden_derivada}."
+                    if operation == "Integral" and tipo_integral == "Definida":
+                        prompt_extra += f" Es una integral definida desde {lim_a} hasta {lim_b}."
+
                     instruccion_pizarra = """
                     REGLAS DE FORMATO MATEMÁTICO DE PIZARRA (OBLIGATORIO):
-                    1. Prohibido formato de computadora (* o **). Usar LaTeX con $ o $$.
-                    2. Al final agrega: '### 🔢 Procedimiento Directo (Vertical)' en bloques $$ independientes.
+                    1. Está COMPLETAMENTE PROHIBIDO escribir matemática como en la computadora. No uses asteriscos (*), no uses dobles asteriscos (**), ni sombreros (^), ni nombres de texto plano como 'x^2' o 'lim (h->0)'.
+                    2. CUALQUIER término matemático, variable, función o ecuación que menciones en tu explicación DEBE estar envuelto en notación LaTeX ($ para texto fluido o $$ para líneas independientes).
+                    3. Ejemplo correcto de pizarra: 'Evaluamos el límite cuando $x \\to 0$ en la función $f(x) = x^2 + 3x$'. Ejemplo incorrecto: 'Evaluamos el limite cuando x->0 en la funcion x**2 + 3*x'.
+                    4. Al final absoluto de tu respuesta, mantén la sección titulada: '### 🔢 Procedimiento Directo (Vertical)'. En ella, pon el desarrollo paso a paso, línea por línea hacia abajo, usando bloques con $$ de LaTeX, sin una sola palabra de texto.
                     """
-                    prompt_profesor = f"Actúa como catedrático de ingeniería. Operación: {operation} | Expresión: ${sp.latex(f)}$ | Resultado: ${sp.latex(result) if not isinstance(result, str) else result}$ {prompt_extra} {instruccion_pizarra}"
+
+                    if operation == "L'Hopital":
+                        prompt_profesor = f"""
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas en la pizarra de la universidad. 
+                        Explica de forma didáctica, clara y ordenada cómo resolver el siguiente límite aplicando la Regla de L'Hôpital (derivando numerador y denominador de la fracción de manera independiente).
+                        Operación: L'Hôpital | Expresión original: ${sp.latex(f)}$ | {prompt_extra} | Resultado final: ${sp.latex(result) if not isinstance(result, str) else result}$
+                        {instruccion_pizarra}
+                        """
+                    else:
+                        prompt_profesor = f"""
+                        Actúa como un profesor de matemáticas de primer año de Ingeniería de Sistemas en la pizarra de la universidad. 
+                        Explica de forma didáctica, clara y ordenada cómo resolver el siguiente ejercicio.
+                        Operación: {operation} | Expresión original: ${sp.latex(f)}$ | {prompt_extra} | Resultado: ${sp.latex(result) if not isinstance(result, str) else result}$
+                        {instruccion_pizarra}
+                        """
                         
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[
-                            {"role": "system", "content": "Eres un catedrático universitario que escribe en pizarra con LaTeX."},
+                            {"role": "system", "content": "Eres un catedrático universitario de matemática pura que escribe impecablemente en la pizarra usando LaTeX ($ o $$). No usas formatos de código de computadora para las fórmulas."},
                             {"role": "user", "content": prompt_profesor}
-                        ], temperature=0.3
+                        ],
+                        temperature=0.3
                     )
                     texto_explicacion = response.choices[0].message.content
                 
                 st.session_state.ultimo_calculo = {
-                    "op": operation, "ex": expr, "result_str": sp.latex(result) if not isinstance(result, str) else result,
-                    "expr_latex": sp.latex(f), "lim_target": lim_target, "explicacion": texto_explicacion, "f_expr": f, "corte_y": corte_y_str
+                    "op": operation,
+                    "ex": expr,
+                    "result_str": sp.latex(result) if not isinstance(result, str) else result,
+                    "expr_latex": sp.latex(f),
+                    "lim_target": lim_target,
+                    "explicacion": texto_explicacion,
+                    "f_expr": f,
+                    "corte_y": corte_y_str
                 }
+                    
             except Exception as e:
                 st.error(f"Error en el procesamiento: {str(e)}")
+                st.session_state.ultimo_calculo = None
 
     if st.session_state.ultimo_calculo is not None:
         calc = st.session_state.ultimo_calculo
         st.markdown("---")
         col_res1, col_res2, col_res3 = st.columns(3)
         with col_res1:
-            if calc["op"] in ["Límite", "L'Hopital"]: st.info(f"**Expresión Original:**\n$\\lim_{{x \\to {calc['lim_target']}}} ({calc['expr_latex']})$")
-            else: st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
-        with col_res2: st.success(f"**Resultado Matemático ({calc['op']}):** ${calc['result_str']}$")
-        with col_res3: st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
+            if calc["op"] in ["Límite", "L'Hopital"]:
+                st.info(f"**Expresión Original:**\n$\\lim_{{x \\to {calc['lim_target']}}} ({calc['expr_latex']})$")
+            else:
+                st.info(f"**Expresión Original:**\n$f(x) = {calc['expr_latex']}$")
+        with col_res2:
+            st.success(f"**Resultado Matemático ({calc['op']}):** ${calc['result_str']}$")
+        with col_res3:
+            st.metric(label="Corte con Eje Y f(0)", value=calc["corte_y"])
         
         st.subheader(" Explicación Paso a Paso")
         st.markdown(calc["explicacion"])
         
-        # Gráfica
+        st.markdown("#### 💾 Gestión de Material de Aprendizaje")
+        col_sav1, col_sav2 = st.columns(2)
+        with col_sav1:
+            st.download_button(
+                label="📥 Descargar Guía de Procedimiento (.txt)",
+                data=f"REPORTE MATHPRO\nOperación: {calc['op']}\nEjercicio: {calc['ex']}\n\n{calc['explicacion']}",
+                file_name=f"Procedimiento_{calc['op']}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+        with col_sav2:
+            if st.button("⭐ Guardar en Mis Ejercicios Favoritos", use_container_width=True):
+                nuevo_fav = {"op": calc["op"], "ex": calc["ex"]}
+                if nuevo_fav not in st.session_state.favoritos:
+                    st.session_state.favoritos.append(nuevo_fav)
+                    st.toast("¡Ejercicio añadido a favoritos exitosamente!", icon="⭐")
+                    st.rerun()
+                else:
+                    st.toast("Este ejercicio ya está en tus favoritos.", icon="ℹ️")
+
+        # Gráfica adaptada al slider lateral
         st.subheader("📈 Gráfica de la función original")
         try:
             x = sp.symbols('x')
             f_num = sp.lambdify(x, calc["f_expr"], "numpy")
             x_vals = np.linspace(-rango_x, rango_x, 400)
             y_vals = f_num(x_vals)
-            if isinstance(y_vals, (int, float)): y_vals = np.full_like(x_vals, y_vals)
+            if isinstance(y_vals, (int, float)):
+                y_vals = np.full_like(x_vals, y_vals)
+                
             fig, ax = plt.subplots(figsize=(8, 4))
-            ax.plot(x_vals, y_vals, color="#003366" if st.session_state.theme == "Orgullo UNI 🔵" else "#2ca02c", linewidth=2)
+            ax.plot(x_vals, y_vals, label=f"f(x) = {calc['ex']}", color="#003366" if st.session_state.theme == "Orgullo UNI 🔵" else "#2ca02c", linewidth=2)
             ax.axhline(0, color='black', linewidth=0.5, ls='--')
             ax.axvline(0, color='black', linewidth=0.5, ls='--')
             ax.grid(True, linestyle=':', alpha=0.6)
             st.pyplot(fig)
-        except Exception: st.warning("Nota: Gráfica analítica no disponible.")
+        except Exception:
+            st.warning("Nota: Gráfica analítica no disponible.")
 
-# [El código restante del Quiz y Formulario de tu script original continúa intacto abajo]
+# --- TAB 2: QUIZ INTERACTIVO ---
+with tab2:
+    st.subheader("📝 Quiz Interactivo con Analíticas y Timer de Presión")
+    
+    questions = [
+        {"pregunta": "Resuelve la ecuación lineal: 3x + 8 = 23", "opciones": ["x = 3", "x = 5", "x = 15", "x = 7"], "correcta": "x = 5", "tema": "Álgebra/Ecuaciones"},
+        {"pregunta": "Encuentra la derivada de: x³ + 4x² - 2x", "opciones": ["3x² + 8x", "x² + 8x - 2", "3x² + 8x - 2", "3x² + 4x - 2"], "correcta": "3x² + 8x - 2", "tema": "Derivadas"},
+        {"pregunta": "Determina la integral indefinida de: 4x + 5", "opciones": ["2x² + 5x + C", "4x² + 5x + C", "2x² + C", "x² + 5x + C"], "correcta": "2x² + 5x + C", "tema": "Integrales"},
+        {"pregunta": "Factoriza la siguiente expresión: x² - 5x + 6", "opciones": ["(x-1)(x-6)", "(x+2)(x+3)", "(x-2)(x-3)", "(x-5)(x+1)"], "correcta": "(x-2)(x-3)", "tema": "Factorización"},
+        {"pregunta": "Simplifica desarrollando el producto: (x+2)(x-3)", "opciones": ["x² - x - 6", "x² + x - 6", "x² - 5x - 6", "x² - 6"], "correcta": "x² - x - 6", "tema": "Álgebra/Ecuaciones"}
+    ]
+    
+    if 'q' not in st.session_state:
+        st.session_state.q = 0
+        st.session_state.score = 0
+        st.session_state.lives = 3
+        st.session_state.respondido = False
+        st.session_state.start_time = time.time()
+
+    st.markdown(f"### Vidas restantes: {'❤️ ' * st.session_state.lives}")
+    
+    mostrar_analisis = False
+    tiempo_total = 0.0
+
+    if st.session_state.lives <= 0:
+        st.error("💀 ¡GAME OVER! Te has quedado sin vidas.")
+        mostrar_analisis = True
+        tiempo_total = time.time() - st.session_state.start_time
+            
+    elif st.session_state.q < len(questions):
+        current_quiz = questions[st.session_state.q]
+        st.write(f"**Pregunta {st.session_state.q + 1} de {len(questions)}:** {current_quiz['pregunta']}")
+        
+        user_ans = st.radio("Selecciona la opción correcta:", current_quiz['opciones'], index=None, key=f"radio_q{st.session_state.q}")
+        
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("Enviar Respuesta", type="primary", disabled=st.session_state.respondido):
+                if user_ans is None:
+                    st.warning("⚠️ Por favor selecciona una opción.")
+                else:
+                    if user_ans == current_quiz['correcta']:
+                        st.session_state.score += 1
+                        st.success("✅ ¡Correcto!")
+                    else:
+                        st.session_state.lives -= 1
+                        tema_afectado = current_quiz['tema']
+                        st.session_state.errores_quiz[tema_afectado] += 1
+                        st.error(f"❌ Incorrecto. Respuesta correcta: **{current_quiz['correcta']}**")
+                    st.session_state.respondido = True
+                    st.rerun()
+                    
+        with col_btn2:
+            if st.session_state.respondido:
+                if st.button("Siguiente Pregunta ➡️"):
+                    st.session_state.q += 1
+                    st.session_state.respondido = False
+                    st.rerun()
+    else:
+        st.success(f"🎉 ¡Quiz terminado!")
+        mostrar_analisis = True
+        tiempo_total = time.time() - st.session_state.start_time
+
+    if mostrar_analisis:
+        st.markdown("---")
+        st.markdown("### ⏱️ Métricas de Eficiencia Temporales")
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            st.metric("Tiempo Total de Resolución", f"{int(tiempo_total // 60)}m {int(tiempo_total % 60)}s")
+        with col_t2:
+            preguntas_respondidas = st.session_state.q if st.session_state.q > 0 else 1
+            st.metric("Velocidad Promedio por Pregunta", f"{tiempo_total / preguntas_respondidas:.2f} segundos")
+        
+        st.markdown("### 📊 Reporte Analítico de Rendimiento")
+        st.bar_chart(st.session_state.errores_quiz)
+        
+        tema_critico = max(st.session_state.errores_quiz, key=st.session_state.errores_quiz.get)
+        max_errores = st.session_state.errores_quiz[tema_critico]
+        
+        if max_errores > 0:
+            st.warning(f"🔍 Nuestro sistema detecta debilidades en la categoría: **{tema_critico}**")
+            if st.button("Generar Ejercicio de Refuerzo"):
+                with st.spinner("Generando un ejercicio a tu medida..."):
+                    client = Groq(api_key=api_key)
+                    prompt_practica = f"Genera un ejercicio de nivel primer año de ingeniería basado estrictamente en el tema: {tema_critico}. Muestra el enunciado y abajo una pestaña oculta o espacio claro que contenga la solución explicada detalladamente para verificar."
+                    response = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role": "system", "content": "Eres un tutor de Inteligencia Artificial que ayuda a estudiantes a reforzar sus puntos bajos en matemática."},
+                            {"role": "user", "content": prompt_practica}
+                        ],
+                        temperature=0.7
+                    )
+                    st.info(response.choices[0].message.content)
+        else:
+            st.success("😎 ¡Excelente balance! No tienes un tema crítico predominante en este intento.")
+
+        if st.button("Reiniciar Cuestionario Completo"):
+            st.session_state.q = 0
+            st.session_state.score = 0
+            st.session_state.lives = 3
+            st.session_state.respondido = False
+            st.session_state.errores_quiz = {"Álgebra/Ecuaciones": 0, "Derivadas": 0, "Integrales": 0, "Factorización": 0}
+            st.session_state.start_time = time.time()
+            st.rerun()
+
+# --- TAB 3: FORMULARIO INTERACTIVO ---
+with tab3:
+    st.subheader("📋 Formulario de Referencia Rápida Matemática")
+    st.markdown("Estructura matemática formal de todas las operaciones integradas en el sistema para estudio guiado:")
+    
+    col_sheet1, col_sheet2 = st.columns(2)
+    with col_sheet1:
+        st.markdown("#### 📐 Álgebra, Simplificación y Factorización")
+        st.markdown("##### Productos Notables y Factorización Común:")
+        st.markdown(r"$$x^2 - y^2 = (x - y)(x + y)$$")
+        st.markdown(r"$$(x \pm y)^2 = x^2 \pm 2xy + y^2$$")
+        st.markdown(r"$$x^3 \pm y^3 = (x \pm y)(x^2 \mp xy + y^2)$$")
+        
+        st.markdown("---")
+        st.markdown("#### 🎯 Límites Matemáticos y Regla de L'Hôpital")
+        st.markdown("##### Límites Notables:")
+        st.markdown(r"$$\lim_{x \to 0} \frac{\sin(x)}{x} = 1$$")
+        st.markdown(r"$$\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e$$")
+        st.markdown("##### Definición Formal de la Regla de L'Hôpital:")
+        st.markdown("Si se genera una indeterminación del tipo $\\frac{0}{0}$ o $\\frac{\\infty}{\\infty}$:")
+        st.markdown(r"$$\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}$$")
+        
+    with col_sheet2:
+        st.markdown("#### ⚡ Derivadas de Funciones Elementales")
+        st.markdown("##### Reglas de Derivación:")
+        st.markdown(r"$$\frac{d}{dx}\left[x^n\right] = n \cdot x^{n-1}$$")
+        st.markdown(r"$$\frac{d}{dx}\left[e^x\right] = e^x$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\ln(x)\right] = \frac{1}{x}$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\sin(x)\right] = \cos(x)$$")
+        st.markdown(r"$$\frac{d}{dx}\left[\cos(x)\right] = -\sin(x)$$")
+        
+        st.markdown("---")
+        st.markdown("#### 📈 Integrales Inmediatas")
+        st.markdown("##### Fórmulas de Integración:")
+        st.markdown(r"$$\int k \, dx = kx + C$$")
+        st.markdown(r"$$\int x^n \, dx = \frac{x^{n+1}}{n+1} + C \quad (n \neq -1)$$")
+        st.markdown(r"$$\int \frac{1}{x} \, dx = \ln|x| + C$$")
+        st.markdown(r"$$\int e^x \, dx = e^x + C$$")
+        st.markdown(r"$$\int \sin(x) \, dx = -\cos(x) + C$$")
+        st.markdown(r"$$\int \cos(x) \, dx = \sin(x) + C$$")
