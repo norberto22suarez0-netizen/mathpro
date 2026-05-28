@@ -6,15 +6,17 @@ import time
 from groq import Groq  
 from PIL import Image
 
-# Intentar cargar EasyOCR de forma segura para el escáner
-try:
-    import easyocr
-    @st.cache_resource
-    def load_ocr():
-        return easyocr.Reader(['en'])
-    reader = load_ocr()
-except Exception:
-    reader = None
+# --- CONFIGURACIÓN SEGURA Y CACHADA DE EASYOCR ---
+@st.cache_resource
+def inicializar_ocr():
+    try:
+        import easyocr
+        # Forzamos la descarga/carga del modelo en inglés y números de forma global
+        return easyocr.Reader(['en'], gpu=False) 
+    except Exception as e:
+        return None
+
+reader = inicializar_ocr()
 
 st.set_page_config(page_title="MathPro Professional", layout="wide", page_icon="📐")
 
@@ -63,7 +65,7 @@ with st.sidebar.expander("📚 Historial de Consultas"):
     else:
         st.write("Sin consultas previas.")
 
-# --- SIDEBAR: SECCIÓN DE FAVORITOS RECUPERADA ---
+# --- SIDEBAR: SECCIÓN DE FAVORITOS ---
 with st.sidebar.expander("⭐ Ejercicios Favoritos"):
     if st.session_state.favoritos:
         for idx, fav in enumerate(st.session_state.favoritos):
@@ -94,18 +96,37 @@ tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluaci�
 with tab1:
     st.subheader("Calculadora Avanzada con Procedimientos")
     
+    # --- MÓDULO DE CÁMARA CORREGIDO Y CORRIENDO ---
     if activar_camara:
-        foto_archivo = st.camera_input("Toma la foto aquí")
-        if foto_archivo is not None and reader is not None:
-            with st.spinner("Escaneando imagen..."):
-                try:
-                    imagen_pil = Image.open(foto_archivo)
-                    resultado_ocr = reader.readtext(np.array(imagen_pil), detail=0)
-                    if resultado_ocr:
-                        st.session_state.input_expr = "".join(resultado_ocr).replace(" ", "").lower().replace("^", "**")
-                        st.success(f"✨ Detectado: `{st.session_state.input_expr}`")
-                except Exception as e:
-                    st.error(f"Error de escaneo: {e}")
+        if reader is None:
+            st.error("❌ La librería 'easyocr' no está instalada o configurada correctamente en tu entorno Python. Ejecuta `pip install easyocr` en tu terminal.")
+        else:
+            st.info("📸 Asegúrate de que el ejercicio esté bien iluminado y centrado en la cámara.")
+            foto_archivo = st.camera_input("Captura el ejercicio escrito")
+            
+            if foto_archivo is not None:
+                with st.spinner("Procesando matriz de píxeles y analizando caracteres..."):
+                    try:
+                        # Convertir la imagen de Streamlit a un formato procesable por EasyOCR
+                        imagen_pil = Image.open(foto_archivo).convert('RGB')
+                        img_np = np.array(imagen_pil)
+                        
+                        # Leer texto de la imagen
+                        resultado_ocr = reader.readtext(img_np, detail=0)
+                        
+                        if resultado_ocr:
+                            # Limpiar espacios, pasar a minúsculas y adaptar sintaxis computacional
+                            texto_detectado = "".join(resultado_ocr).replace(" ", "").lower()
+                            texto_detectado = texto_detectado.replace("^", "**")
+                            
+                            # Forzar la actualización del estado de la aplicación
+                            st.session_state.input_expr = texto_detectado
+                            st.success(f"✨ Expresión detectada con éxito: `{texto_detectado}`")
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ La cámara tomó la foto pero el modelo OCR no reconoció ningún carácter numérico o variable. Intenta acercar más el papel o mejorar la iluminación.")
+                    except Exception as e:
+                        st.error(f"Error interno durante el escaneo analítico: {str(e)}")
     
     col1, col2 = st.columns([2, 2])
     with col1:
@@ -225,7 +246,7 @@ with tab1:
         except Exception:
             st.warning("Gráfica no disponible.")
 
-# --- TAB 2: QUIZ INTERACTIVO COMPLETO (5 PREGUNTAS) ---
+# --- TAB 2: QUIZ INTERACTIVO ---
 with tab2:
     st.subheader("📝 Quiz Interactivo con Analíticas y Timer de Presión")
     
@@ -328,31 +349,26 @@ with tab2:
             st.session_state.start_time = time.time()
             st.rerun()
 
-# --- TAB 3: FORMULARIO INTERACTIVO DETALLADO RECUPERADO ---
+# --- TAB 3: FORMULARIO INTERACTIVO ---
 with tab3:
     st.subheader("📋 Formulario de Referencia Rápida Matemática")
-    st.markdown("Estructura matemática formal de todas las operaciones integradas en el sistema para estudio guiado:")
     
     col_sheet1, col_sheet2 = st.columns(2)
     with col_sheet1:
         st.markdown("#### 📐 Álgebra, Simplificación y Factorización")
-        st.markdown("##### Productos Notables y Factorización Común:")
         st.latex(r"x^2 - y^2 = (x - y)(x + y)")
         st.latex(r"(x \pm y)^2 = x^2 \pm 2xy + y^2")
         st.latex(r"x^3 \pm y^3 = (x \pm y)(x^2 \mp xy + y^2)")
         
         st.markdown("---")
         st.markdown("#### 🎯 Límites Matemáticos y Regla de L'Hôpital")
-        st.markdown("##### Límites Notables:")
         st.latex(r"\lim_{x \to 0} \frac{\sin(x)}{x} = 1")
         st.latex(r"\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e")
-        st.markdown("##### Definición Formal de la Regla de L'Hôpital:")
         st.markdown("Si se genera una indeterminación del tipo $\\frac{0}{0}$ o $\\frac{\\infty}{\\infty}$:")
         st.latex(r"\lim_{x \to c} \frac{f(x)}{g(x)} = \lim_{x \to c} \frac{f'(x)}{g'(x)}")
         
     with col_sheet2:
         st.markdown("#### ⚡ Derivadas de Funciones Elementales")
-        st.markdown("##### Reglas de Derivación:")
         st.latex(r"\frac{d}{dx}\left[x^n\right] = n \cdot x^{n-1}")
         st.latex(r"\frac{d}{dx}\left[e^x\right] = e^x")
         st.latex(r"\frac{d}{dx}\left[\ln(x)\right] = \frac{1}{x}")
@@ -361,7 +377,6 @@ with tab3:
         
         st.markdown("---")
         st.markdown("#### 📈 Integrales Inmediatas")
-        st.markdown("##### Fórmulas de Integración:")
         st.latex(r"\int k \, dx = kx + C")
         st.latex(r"\int x^n \, dx = \frac{x^{n+1}}{n+1} + C \quad (n \neq -1)")
         st.latex(r"\int \frac{1}{x} \, dx = \ln|x| + C")
