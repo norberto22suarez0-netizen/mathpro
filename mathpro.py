@@ -3,6 +3,7 @@ import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
 import time  
+import base64
 from groq import Groq  
 from PIL import Image
 
@@ -30,7 +31,7 @@ if st.session_state.theme == "Hacker Mode 💻":
 elif st.session_state.theme == "Orgullo UNI 🔵":
     st.markdown("<style>.stApp { background-color: #f8fafc; } h1, h2, h3 { color: #003366 !important; } .stButton>button { background-color: #003366; color: white !important; }</style>", unsafe_allow_html=True)
 
-# --- API KEY DE GROQ INTEGRADA AUTOMÁTICAMENTE ---
+# --- API KEY DE GROQ FIJA Y CORREGIDA ---
 api_key = "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"
 
 # Inicialización de estados de la sesión
@@ -84,28 +85,26 @@ tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluaci�
 with tab1:
     st.subheader("Calculadora Avanzada con Procedimientos")
     
-    # --- MÓDULO DE CÁMARA REPARADO PARA STREAMLIT CLOUD ---
+    # --- MODELO DE VISIÓN ACTUALIZADO ---
     if activar_camara:
         st.info("📸 Captura una foto nítida de tu ejercicio matemático.")
         foto_archivo = st.camera_input("Toma la foto aquí")
         
         if foto_archivo is not None:
-            with st.spinner("Analizando imagen con el motor visual..."):
+            with st.spinner("Analizando imagen con el nuevo motor visual de Groq..."):
                 try:
-                    # Usamos el API de Groq con capacidades de visión para procesar la imagen sin depender de easyocr
                     client = Groq(api_key=api_key)
                     imagen_bytes = foto_archivo.read()
-                    
-                    import base64
                     base64_image = base64.b64encode(imagen_bytes).decode('utf-8')
                     
+                    # Usamos el modelo de visión actualizado de Groq
                     response_vision = client.chat.completions.create(
-                        model="llama-3.2-11b-vision-preview",
+                        model="llama-3.2-90b-vision-preview",
                         messages=[
                             {
                                 "role": "user",
                                 "content": [
-                                    {"type": "text", "text": "Extrae únicamente la expresión matemática de esta imagen. Devuelve SOLO la ecuación en formato de texto plano compatible con Python/SymPy (usa * para multiplicar y ** para potencias). No añadas introducciones, explicaciones ni texto adicional. Ejemplo de salida esperada: x**2 + 3*x + 5"},
+                                    {"type": "text", "text": "Extrae la expresión matemática de esta imagen. Devuelve únicamente la ecuación o función en formato de texto plano compatible con Python y SymPy (usa * para multiplicar y ** para potencias). No agregues saludos, explicaciones ni formato markdown. Ejemplo: x**2 + 3*x + 5"},
                                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                 ]
                             }
@@ -114,7 +113,6 @@ with tab1:
                     )
                     
                     texto_detectado = response_vision.choices[0].message.content.strip().lower().replace(" ", "")
-                    # Limpieza básica de caracteres comunes de formato markdown que devuelven los LLMs
                     texto_detectado = texto_detectado.replace("`", "").replace("^", "**")
                     
                     if texto_detectado:
@@ -168,15 +166,15 @@ with tab1:
 
             st.session_state.historial.append({"op": operation, "ex": expr})
             
-            # --- EXPLICACIÓN ORIGINAL DEL MAESTRO RESTAURADA ---
+            # --- PROMPT DEL MAESTRO ORIGINAL RECONSTRUIDO ---
             with st.spinner("Generando explicación académica con Groq..."):
                 try:
                     client = Groq(api_key=api_key)
-                    prompt = f"Actúa como un profesor excelente de matemáticas de primer año de Ingeniería de Sistemas. Explica detalladamente y paso a paso cómo resolver la operación de {operation} para la expresión {expr}. El resultado matemático obtenido es {result}. Redacta la explicación de forma natural y pedagógica para tus alumnos de la universidad, usando formato LaTeX ($) para que todas las fórmulas se muestren perfectas y elegantes."
+                    prompt = f"Actúa como profesor de matemáticas universitarias. Explica paso a paso de forma clara la operación {operation} para la función ${sp.latex(f)}$ cuyo resultado es ${sp.latex(result) if not isinstance(result, str) else result}$. Usa exclusivamente LaTeX ($) para todas las expresiones matemáticas. Al final agrega una sección llamada '### 🔢 Procedimiento Directo (Vertical)' estructurada en líneas $$ consecutivas."
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}],
-                        temperature=0.5
+                        temperature=0.3
                     )
                     texto_explicacion = response.choices[0].message.content
                 except Exception as e:
@@ -227,7 +225,7 @@ with tab1:
                     st.toast("¡Ejercicio añadido a favoritos!", icon="⭐")
                     st.rerun()
 
-        # --- GRÁFICA AL FINAL COMO ESTABA ANTES ---
+        # --- GRÁFICA AL FINAL CON EL TEXTO ---
         st.subheader("📈 Gráfica de la Función")
         try:
             x = sp.symbols('x')
