@@ -7,6 +7,7 @@ import base64
 from groq import Groq  
 from PIL import Image
 
+# Configuración inicial de la página
 st.set_page_config(page_title="MathPro Professional", layout="wide", page_icon="📐")
 
 # --- 1. CONFIGURACIÓN DE TEMAS VISUALES ---
@@ -19,31 +20,51 @@ st.session_state.theme = st.sidebar.selectbox(
     ["Clásico Universitario", "Hacker Mode 💻", "Orgullo UNI 🔵"]
 )
 
+# Control de visualización de la gráfica
+st.sidebar.markdown("### 📊 Control de Gráfica")
 rango_x = st.sidebar.slider("Rango de visualización (Eje X)", 1, 50, 10)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📷 Escáner de Ejercicios")
-activar_camara = st.sidebar.checkbox("Activar Cámara", value=False)
+activar_camara = st.sidebar.checkbox("Activar Cámara / OCR", value=False)
 
-# Inyección de CSS de los temas visuales
+# Inyección de CSS según el tema seleccionado
 if st.session_state.theme == "Hacker Mode 💻":
-    st.markdown("<style>.stApp { background-color: #0d1117; color: #39ff14; } h1, h2, h3, h4, label, p, span { color: #39ff14 !important; font-family: 'Courier New'; }</style>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .stApp { background-color: #0d1117; color: #39ff14; } 
+        h1, h2, h3, h4, label, p, span { color: #39ff14 !important; font-family: 'Courier New'; }
+        .stButton>button { background-color: #21262d; color: #39ff14 !important; border: 1px solid #39ff14; }
+        </style>
+    """, unsafe_allow_html=True)
 elif st.session_state.theme == "Orgullo UNI 🔵":
-    st.markdown("<style>.stApp { background-color: #f8fafc; } h1, h2, h3 { color: #003366 !important; } .stButton>button { background-color: #003366; color: white !important; }</style>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .stApp { background-color: #f8fafc; } 
+        h1, h2, h3 { color: #003366 !important; font-family: 'Arial'; } 
+        .stButton>button { background-color: #003366; color: white !important; }
+        </style>
+    """, unsafe_allow_html=True)
 
-# --- API KEY DE GROQ FIJA Y CORREGIDA ---
+# --- API KEY DE GROQ INYECTADA DIRECTAMENTE (SIN INPUT EN SIDEBAR) ---
 api_key = "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"
 
-# Inicialización de estados de la sesión
-if 'historial' not in st.session_state: st.session_state.historial = []
-if 'errores_quiz' not in st.session_state: st.session_state.errores_quiz = {"Álgebra/Ecuaciones": 0, "Derivadas": 0, "Integrales": 0, "Factorización": 0}
-if 'favoritos' not in st.session_state: st.session_state.favoritos = []
-if 'input_expr' not in st.session_state: st.session_state.input_expr = "x**2 + 3*x + 5"
-if 'input_op' not in st.session_state: st.session_state.input_op = "Simplificar"
-if 'ultimo_calculo' not in st.session_state: st.session_state.ultimo_calculo = None
+# Inicialización estricta de los estados de la sesión (Session State)
+if 'historial' not in st.session_state: 
+    st.session_state.historial = []
+if 'errores_quiz' not in st.session_state: 
+    st.session_state.errores_quiz = {"Álgebra/Ecuaciones": 0, "Derivadas": 0, "Integrales": 0, "Factorización": 0}
+if 'favoritos' not in st.session_state: 
+    st.session_state.favoritos = []
+if 'input_expr' not in st.session_state: 
+    st.session_state.input_expr = "x**2 + 3*x + 5"
+if 'input_op' not in st.session_state: 
+    st.session_state.input_op = "Simplificar"
+if 'ultimo_calculo' not in st.session_state: 
+    st.session_state.ultimo_calculo = None
 
 # --- SIDEBAR: HISTORIAL DE CONSULTAS ---
-with st.sidebar.expander("📚 Historial de Consultas"):
+with st.sidebar.expander("📚 Historial de Consultas", expanded=False):
     if st.session_state.historial:
         for i, h in enumerate(reversed(st.session_state.historial)):
             st.write(f"**{i+1}.** {h['op']}: `{h['ex']}`")
@@ -55,7 +76,7 @@ with st.sidebar.expander("📚 Historial de Consultas"):
         st.write("Sin consultas previas.")
 
 # --- SIDEBAR: SECCIÓN DE FAVORITOS ---
-with st.sidebar.expander("⭐ Ejercicios Favoritos"):
+with st.sidebar.expander("⭐ Ejercicios Favoritos", expanded=False):
     if st.session_state.favoritos:
         for idx, fav in enumerate(st.session_state.favoritos):
             col_fav1, col_fav2 = st.columns([3, 1])
@@ -74,42 +95,46 @@ with st.sidebar.expander("⭐ Ejercicios Favoritos"):
         st.write("No tienes elementos guardados.")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**App diseñada para jóvenes universitarios de la materia de Matemática I**")
+st.sidebar.markdown("App diseñada para jóvenes universitarios de la materia de **Matemática I**")
 
+# Cabecera Principal de la Aplicación
 st.title("📐 MathPro - Calculadora")
 st.markdown("### 1er Año Ingeniería de Sistemas")
 
+# Creación de pestañas de navegación
 tab1, tab2, tab3 = st.tabs(["🧮 Calculadora Avanzada", "📝 Quiz de Evaluación", "📋 Fórmulas Útiles"])
 
-# --- TAB 1: CALCULADORA ---
+# ==========================================
+# --- TAB 1: CALCULADORA AVANZADA ---
+# ==========================================
 with tab1:
     st.subheader("Calculadora Avanzada con Procedimientos")
     
-    # --- MODELO DE VISIÓN ACTUALIZADO ---
+    # --- MÓDULO DE CÁMARA CON MODELO ESTABLE DE PRODUCCIÓN ---
     if activar_camara:
-        st.info("📸 Captura una foto nítida de tu ejercicio matemático.")
-        foto_archivo = st.camera_input("Toma la foto aquí")
+        st.info("📸 Captura una foto nítida de tu ejercicio matemático escrito en papel.")
+        foto_archivo = st.camera_input("Toma la foto del ejercicio")
         
         if foto_archivo is not None:
-            with st.spinner("Analizando imagen con el nuevo motor visual de Groq..."):
+            with st.spinner("Analizando caracteres con el motor óptico estable de Groq..."):
                 try:
                     client = Groq(api_key=api_key)
                     imagen_bytes = foto_archivo.read()
                     base64_image = base64.b64encode(imagen_bytes).decode('utf-8')
                     
-                    # Usamos el modelo de visión actualizado de Groq
+                    # Usamos el modelo de visión definitivo de producción (evita errores de deprecación)
                     response_vision = client.chat.completions.create(
-                        model="llama-3.2-90b-vision-preview",
+                        model="llama-3.2-11b-vision",
                         messages=[
                             {
                                 "role": "user",
                                 "content": [
-                                    {"type": "text", "text": "Extrae la expresión matemática de esta imagen. Devuelve únicamente la ecuación o función en formato de texto plano compatible con Python y SymPy (usa * para multiplicar y ** para potencias). No agregues saludos, explicaciones ni formato markdown. Ejemplo: x**2 + 3*x + 5"},
+                                    {"type": "text", "text": "Extract the mathematical expression from this image. Return ONLY the raw equation or function string compatible with Python SymPy parsing (use * for multiplication and ** for exponents). Absolute rule: Do not include any markdown, backticks, formatting, thoughts, introductory text or greeting. Just return the pure mathematical expression string. Example: x**2 + 3*x + 5"},
                                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
                                 ]
                             }
                         ],
-                        temperature=0.1
+                        temperature=0.0
                     )
                     
                     texto_detectado = response_vision.choices[0].message.content.strip().lower().replace(" ", "")
@@ -117,21 +142,23 @@ with tab1:
                     
                     if texto_detectado:
                         st.session_state.input_expr = texto_detectado
-                        st.success(f"✨ Expresión detectada: `{texto_detectado}`")
+                        st.success(f"✨ Expresión cargada al editor: `{texto_detectado}`")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Error al analizar la imagen: {str(e)}")
+                    st.error(f"Error en el procesamiento del OCR: {str(e)}")
     
+    # Formulario de entrada matemática
     col1, col2 = st.columns([2, 2])
     with col1:
         lista_ops = ["Simplificar", "Límite", "L'Hopital", "Derivada", "Integral", "Factorizar"]
         operation = st.selectbox("Selecciona operación", lista_ops, index=lista_ops.index(st.session_state.input_op))
     with col2:
-        expr = st.text_input("Expresión matemática (Usa * y **):", value=st.session_state.input_expr)
+        expr = st.text_input("Expresión matemática (Usa * para multiplicar y ** para potencias):", value=st.session_state.input_expr)
     
     st.session_state.input_expr = expr
     st.session_state.input_op = operation
 
+    # Controles dinámicos extras según la operación
     lim_target = "0"
     orden_derivada = 1
     tipo_integral = "Indefinida"
@@ -140,53 +167,71 @@ with tab1:
     if operation in ["Límite", "L'Hopital"]:
         lim_target = st.text_input("¿A qué valor tiende x?", "0")
     elif operation == "Derivada":
-        orden_derivada = st.selectbox("Orden:", [1, 2, 3], format_func=lambda x: f"{x}ª Derivada")
+        orden_derivada = st.selectbox("Orden del cálculo:", [1, 2, 3], format_func=lambda x: f"{x}ª Derivada")
     elif operation == "Integral":
-        tipo_integral = st.radio("Tipo:", ["Indefinida", "Definida"], horizontal=True)
+        tipo_integral = st.radio("Tipo de integración:", ["Indefinida", "Definida"], horizontal=True)
         if tipo_integral == "Definida":
             c_a, c_b = st.columns(2)
             with c_a: lim_a = st.text_input("Límite inferior (a):", "-1")
             with c_b: lim_b = st.text_input("Límite superior (b):", "1")
     
+    # Bloque de ejecución analítica
     if st.button("Calcular Todo", type="primary", use_container_width=True):
         try:
             x = sp.symbols('x')
             f = sp.sympify(expr)
             
-            if operation == "Derivada": result = sp.diff(f, x, orden_derivada)
+            # Motor analítico de SymPy
+            if operation == "Derivada": 
+                result = sp.diff(f, x, orden_derivada)
             elif operation == "Integral":
-                if tipo_integral == "Definida": result = sp.integrate(f, (x, sp.sympify(lim_a), sp.sympify(lim_b)))
-                else: result = f"{sp.integrate(f, x)} + C"
-            elif operation == "Factorizar": result = sp.factor(f)
-            elif operation in ["Límite", "L'Hopital"]: result = sp.limit(f, x, sp.sympify(lim_target))
-            else: result = sp.simplify(f)
+                if tipo_integral == "Definida": 
+                    result = sp.integrate(f, (x, sp.sympify(lim_a), sp.sympify(lim_b)))
+                else: 
+                    result = f"{sp.integrate(f, x)} + C"
+            elif operation == "Factorizar": 
+                result = sp.factor(f)
+            elif operation in ["Límite", "L'Hopital"]: 
+                result = sp.limit(f, x, sp.sympify(lim_target))
+            else: 
+                result = sp.simplify(f)
             
-            try: corte_y = str(f.subs(x, 0))
-            except Exception: corte_y = "No definido"
+            try: 
+                corte_y = str(f.subs(x, 0))
+            except Exception: 
+                corte_y = "No definido"
 
             st.session_state.historial.append({"op": operation, "ex": expr})
             
-            # --- PROMPT DEL MAESTRO ORIGINAL RECONSTRUIDO ---
-            with st.spinner("Generando explicación académica con Groq..."):
+            # --- SECCIÓN: PROMPT ORIGINAL DEL EXCELENTE MAESTRO RECONSTITUIDO ---
+            with st.spinner("Generando explicación académica detallada con Groq..."):
                 try:
                     client = Groq(api_key=api_key)
-                    prompt = f"Actúa como profesor de matemáticas universitarias. Explica paso a paso de forma clara la operación {operation} para la función ${sp.latex(f)}$ cuyo resultado es ${sp.latex(result) if not isinstance(result, str) else result}$. Usa exclusivamente LaTeX ($) para todas las expresiones matemáticas. Al final agrega una sección llamada '### 🔢 Procedimiento Directo (Vertical)' estructurada en líneas $$ consecutivas."
+                    prompt = f"""
+                    Actúa como un excelente y riguroso profesor de matemáticas de primer año de Ingeniería de Sistemas. 
+                    Explica detalladamente, de manera analítica y paso a paso, cómo resolver la operación de {operation} para la expresión matemática {expr}.
+                    El resultado analítico correcto obtenido es {result}. 
+                    Desglosa las leyes algebraicas, teoremas o reglas aplicadas (como la regla de la cadena, linealidad o sustitución si aplica) de forma ordenada y limpia.
+                    Usa obligatoriamente la notación estándar de LaTeX encerrando cada fórmula entre símbolos de '$' para que se renderice de forma impecable en la pizarra. 
+                    Mantén un lenguaje técnico pero sumamente comprensible para tus estudiantes universitarios.
+                    """
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}],
-                        temperature=0.3
+                        temperature=0.4
                     )
                     texto_explicacion = response.choices[0].message.content
                 except Exception as e:
-                    texto_explicacion = f"❌ Error de conexión con Groq: {str(e)}"
+                    texto_explicacion = f"❌ Error de comunicación con el servicio de IA: {str(e)}"
 
             st.session_state.ultimo_calculo = {
                 "op": operation, "ex": expr, "result_raw": result, "expr_latex": sp.latex(f),
                 "lim_target": lim_target, "explicacion": texto_explicacion, "f_expr": f, "corte_y": corte_y
             }
         except Exception as e:
-            st.error(f"Error en la expresión: {str(e)}")
+            st.error(f"Error en la expresión matemática ingresada: {str(e)}")
 
+    # Despliegue de los resultados en la interfaz gráfica
     if st.session_state.ultimo_calculo is not None:
         calc = st.session_state.ultimo_calculo
         st.markdown("---")
@@ -194,20 +239,24 @@ with tab1:
         
         with res_col1:
             st.info("**Expresión Registrada:**")
-            if calc["op"] in ["Límite", "L'Hopital"]: st.latex(f"\\lim_{{x \\to {calc['lim_target']}}} ({calc['expr_latex']})")
-            else: st.latex(f"f(x) = {calc['expr_latex']}")
+            if calc["op"] in ["Límite", "L'Hopital"]: 
+                st.latex(f"\\lim_{{x \\to {calc['lim_target']}}} ({calc['expr_latex']})")
+            else: 
+                st.latex(f"f(x) = {calc['expr_latex']}")
             
         with res_col2:
-            st.success(f"**Resultado ({calc['op']}):**")
+            st.success(f"**Resultado Final ({calc['op']}):**")
             st.latex(sp.latex(calc["result_raw"]) if not isinstance(calc["result_raw"], str) else calc["result_raw"])
             
         with res_col3:
             st.metric(label="Corte Eje Y f(0)", value=calc["corte_y"])
         
+        # Explicación del Catedrático
         st.subheader("📝 Explicación del Catedrático")
         st.markdown(calc["explicacion"])
         
-        st.markdown("#### 💾 Gestión de Material")
+        # Descargas y Favoritos
+        st.markdown("#### 💾 Gestión de Material Académico")
         col_sav1, col_sav2 = st.columns(2)
         with col_sav1:
             st.download_button(
@@ -225,26 +274,31 @@ with tab1:
                     st.toast("¡Ejercicio añadido a favoritos!", icon="⭐")
                     st.rerun()
 
-        # --- GRÁFICA AL FINAL CON EL TEXTO ---
+        # Renderizado de Gráficas en la parte inferior
         st.subheader("📈 Gráfica de la Función")
         try:
             x = sp.symbols('x')
             f_num = sp.lambdify(x, calc["f_expr"], "numpy")
             x_vals = np.linspace(-rango_x, rango_x, 400)
             y_vals = f_num(x_vals)
-            if isinstance(y_vals, (int, float)): y_vals = np.full_like(x_vals, y_vals)
+            if isinstance(y_vals, (int, float)): 
+                y_vals = np.full_like(x_vals, y_vals)
+                
             fig, ax = plt.subplots(figsize=(8, 3))
-            ax.plot(x_vals, y_vals, color="#003366" if st.session_state.theme == "Orgullo UNI 🔵" else "#2ca02c", linewidth=2)
+            color_grafica = "#003366" if st.session_state.theme == "Orgullo UNI 🔵" else "#2ca02c"
+            ax.plot(x_vals, y_vals, color=color_grafica, linewidth=2)
             ax.axhline(0, color='black', linewidth=0.5, ls='--')
             ax.axvline(0, color='black', linewidth=0.5, ls='--')
             ax.grid(True, linestyle=':', alpha=0.6)
             st.pyplot(fig)
         except Exception:
-            st.warning("Gráfica no disponible.")
+            st.warning("Gráfica no disponible para esta expresión específica.")
 
+# ==========================================
 # --- TAB 2: QUIZ INTERACTIVO ---
+# ==========================================
 with tab2:
-    st.subheader("📝 Quiz Interactivo con Analíticas y Timer de Presión")
+    st.subheader("📝 Quiz Interactivo con Analíticas de Rendimiento")
     
     questions = [
         {"pregunta": "Resuelve la ecuación lineal: 3x + 8 = 23", "opciones": ["x = 3", "x = 5", "x = 15", "x = 7"], "correcta": "x = 5", "tema": "Álgebra/Ecuaciones"},
@@ -345,7 +399,9 @@ with tab2:
             st.session_state.start_time = time.time()
             st.rerun()
 
+# ==========================================
 # --- TAB 3: FORMULARIO INTERACTIVO ---
+# ==========================================
 with tab3:
     st.subheader("📋 Formulario de Referencia Rápida Matemática")
     
